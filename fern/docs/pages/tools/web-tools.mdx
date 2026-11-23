@@ -1,0 +1,124 @@
+---
+title: "Web Tools"
+description: "Configure built-in web search and web fetch tools in settings.yaml."
+---
+
+This page covers the server-side configuration for built-in web tools.
+
+Use this together with [Tools](/api-guide/tools) for request examples.
+
+---
+
+## Supported web tools
+
+Built-in web tools include:
+
+- `web_search_v1`
+- `web_fetch_v1`
+- `/v1/tools/web-search`
+- `/v1/tools/web-fetch`
+
+`web_extract_v1` remains accepted as a legacy alias for `web_fetch_v1`.
+
+---
+
+## How to install
+
+Install requirements:
+
+- `private-gpt[tool-web-scraping]`
+- or `private-gpt[tools]`
+- or `private-gpt[core]`
+
+After installing or updating Playwright, download the required browsers:
+
+```bash
+playwright install
+```
+
+---
+
+## Settings reference
+
+### Enable web fetch
+
+`web_fetch_v1` and `/v1/tools/web-fetch` require `web_fetch.enabled: true`.
+
+```yaml
+web_fetch:
+  enabled: true
+  timeout_seconds: 15
+```
+
+---
+
+### Enable web search
+
+`web_search_v1` and `/v1/tools/web-search` require both web fetch and web search, plus a configured provider.
+
+```yaml
+web_fetch:
+  enabled: true
+
+web_search:
+  enabled: true
+  provider: brave
+  processor: best_links
+  num_links: 20
+  mode_quality: fast
+  cached: false
+  context_token: 0
+
+brave:
+  api_key: ${PGPT_BRAVE_API_KEY:}
+  rate_limit: 1
+```
+
+<Note>
+  `web_search` depends on web fetching, so `web_fetch.enabled` must also be `true`.
+</Note>
+
+---
+
+### Search with Parallel
+
+Set `web_search.provider: parallel` to get public sources and excerpts from
+Parallel. This sends search queries to `https://mcp.parallel.ai/mcp`.
+Anonymous search is available within the free-tier limits. Set
+`PGPT_PARALLEL_API_KEY` if your deployment needs higher limits.
+
+Install `private-gpt[tool-mcp]` alongside your web tools dependencies if your
+installation does not already include the MCP extra. The `tools` and `core`
+extras include it.
+
+```yaml
+web_fetch:
+  enabled: true
+
+web_search:
+  enabled: true
+  provider: parallel
+  processor: simple_text
+```
+
+With `simple_text`, the tool returns the provider's excerpts directly. To try
+it on your running server, send `{"query":"NASA Voyager interstellar mission"}`
+to `POST /v1/tools/web-search`, or enable **Web** in a Workbench chat.
+
+### Settings
+
+| Setting | Description |
+|---|---|
+| `web_fetch.enabled` | Enables URL fetching and text extraction. |
+| `web_fetch.timeout_seconds` | Timeout for fetching a page. |
+| `web_search.enabled` | Enables web search. |
+| `web_search.provider` | Search provider. Built-in options are `brave`, `mock`, and `parallel`. |
+| `web_search.processor` | Post-processing strategy for results. |
+| `web_search.num_links` | Maximum number of fetched search results. |
+| `web_search.mode_quality` | Preset that controls the fast vs accurate parameter block. |
+| `web_search.cached` | Enables caching for repeated searches. |
+| `web_search.context_token` | Optional token budget used by the result processor. `0` disables the limit. |
+| `brave.api_key` | Brave Search API key. Required when using `provider: brave`. |
+| `brave.rate_limit` | Minimum seconds between Brave API requests. |
+| `parallel.api_key` | Optional Parallel API key. |
+| `parallel.timeout` | Timeout in seconds for searching with Parallel. |

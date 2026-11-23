@@ -1,0 +1,104 @@
+---
+title: "Ingestion"
+description: "Ingest, list, retrieve, and delete documents synchronously."
+---
+
+Documents are ingested through `/v1/artifacts/ingest`. Once ingested they are chunked, embedded, and stored in the vector store for retrieval.
+
+---
+
+## Ingest a file
+
+The endpoint takes JSON. Send the file as base64, and give it an `artifact` ID and a `collection`:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    {
+      printf '{"artifact": "quarterly-report", "collection": "my-collection", '
+      printf '"metadata": {"file_name": "document.pdf"}, "input": {"type": "file", "value": "'
+      base64 < /path/to/document.pdf | tr -d '\n'
+      printf '"}}'
+    } | curl -X POST http://localhost:8080/v1/artifacts/ingest \
+      -H "Content-Type: application/json" \
+      --data-binary @-
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $body = @{
+      artifact   = "quarterly-report"
+      collection = "my-collection"
+      input      = @{ type = "file"; value = [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\document.pdf")) }
+      metadata   = @{ file_name = "document.pdf" }
+    } | ConvertTo-Json
+    Invoke-RestMethod -Method Post -Uri http://localhost:8080/v1/artifacts/ingest `
+      -ContentType "application/json" -Body $body
+    ```
+  </Tab>
+</Tabs>
+
+Plain text can be sent directly with `"input": {"type": "text", "value": "..."}`.
+
+---
+
+## List ingested documents
+
+```bash
+curl "http://localhost:8080/v1/artifacts/list?collection=my-collection"
+```
+
+---
+
+## Delete a document
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/delete \
+  -H "Content-Type: application/json" \
+  -d '{"collection": "my-collection", "artifact": "<artifact-id>"}'
+```
+
+### Wipe all local data
+
+```bash
+make wipe
+```
+
+<Warning>
+  This deletes everything under `PGPT_HOME/local_data/` (default `~/.local/share/private-gpt/local_data/`) including the vector store. It cannot be undone.
+</Warning>
+
+---
+
+## Bulk local ingestion
+
+To ingest an entire folder from the command line, enable local ingestion in your settings:
+
+```yaml
+data:
+  local_ingestion:
+    enabled: true
+    allow_ingest_from: ["*"]
+```
+
+Then run:
+
+```bash
+make ingest /path/to/folder
+```
+
+Watch mode (re-ingest on file changes):
+
+```bash
+make ingest /path/to/folder -- --watch
+```
+
+---
+
+## Supported file formats
+
+PrivateGPT handles plain text natively. The following formats are also supported with built-in parsers:
+
+`.pdf` · `.docx` · `.pptx` · `.ppt` · `.pptm` · `.hwp` · `.epub` · `.md` · `.csv` · `.json` · `.ipynb` · `.mbox` · `.jpg` · `.jpeg` · `.png` · `.mp3` · `.mp4`
+
+Any other file type is read as plain text.
